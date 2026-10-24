@@ -1,0 +1,45 @@
+name: Build Android APK Direct
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Build APK Directly
+        run: |
+          # Ekstrak ZIP project
+          unzip -o *.zip
+          
+          # Cari folder utama project (yang memiliki settings.gradle.kts)
+          PROJECT_DIR=$(find . -name "settings.gradle.kts" -type f -exec dirname {} \; | head -n 1)
+          if [ -z "$PROJECT_DIR" ]; then
+            PROJECT_DIR="."
+          fi
+          echo "Masuk ke folder project: $PROJECT_DIR"
+          cd "$PROJECT_DIR"
+          
+          # Download Gradle 9.3.1 secara otomatis sesuai konfigurasi project
+          GRADLE_VERSION="9.3.1"
+          echo "Mengunduh Gradle $GRADLE_VERSION..."
+          wget -q https://services.gradle.org/distributions/gradle-${GRADLE_VERSION}-bin.zip
+          unzip -q gradle-${GRADLE_VERSION}-bin.zip
+          export PATH=$PWD/gradle-${GRADLE_VERSION}/bin:$PATH
+          
+          # Jalankan build APK langsung
+          gradle assembleDebug
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-debug
+          path: '**/build/outputs/apk/debug/*.apk'
